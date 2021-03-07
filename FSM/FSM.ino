@@ -201,68 +201,6 @@ bool plot_verbose = false;
 unsigned int Lturn = 2500;
 unsigned int Rturn = 4500;
 
-void BangBang() {
-  // bang-bang conditions
-  if ( lc.notOnLine() ) {
-    // centre not on line, check left and right 
-    if ( ll.notOnLine() ) {
-      // left not on line either, check right
-      if ( lr.notOnLine() ) {
-        // nothing on line
-        // turn left 90 degrees
-        m.turnOnSpot(pLow, LEFT);
-        delay(Lturn);
-        // and check if there is a line
-        if ( ll.notOnLine() && lc.notOnLine() && lr.notOnLine() ) {
-          // not on line turn right 180 degrees
-          // and check if there is a line
-          m.turnOnSpot(pLow, RIGHT);
-          delay(Rturn);
-          // heck if there is a line
-          if ( ll.notOnLine() && lc.notOnLine() && lr.notOnLine() ) {
-            // not on line
-            // turn left 90 degrees
-            m.turnOnSpot(pLow, LEFT);
-            delay(Lturn);
-            // and just move straight slowly
-            m.move(pLow);
-            delay(1000);
-          }
-        }
-      }
-      else {
-        // only right on line
-        // turn fast using right as pivot
-        m.turn(pHigh, RIGHT);
-      }
-    }
-    else if ( lr.notOnLine() ) {
-      // left on line, centre not on line 
-      // => right not on line either 
-      // turn fast using left as pivot
-      m.turn(pHigh, LEFT);
-    }
-  }
-  else {
-    // centre is on line, check left and right
-    // (not possible to only have centre on line)
-    if ( ll.notOnLine() ) { 
-      // left not on line
-      // turn slowly using right as pivot
-      m.turn(pLow, RIGHT);
-    }
-    else if ( lr.notOnLine() ) { 
-      // right not on line
-      // turn slowly using left as pivot
-      m.turn(pLow, LEFT);
-    }
-    else {
-      // all 3 on line, move straight fast
-      m.move(pHigh);
-    }
-  }
-}
-
 // Setup, only runs once when powered on.
 void setup() {
   // set leds as output
@@ -282,41 +220,22 @@ void loop()
   if ( state == 0 ) {
     // callibration state
     m.move(pLow); 
-    led_on(RED);
     // run callibration procedures for each
     ll.cal();
     lc.cal();
     lr.cal();
     count++;
     if ( count >= calTime ) {
-      state++;
+      buzz_on();
+      state = 1;
     }
   }
   else if ( state == 1 ) {
     // find line
-    led_on(GREEN);
-    if (plot_verbose) {
-      Serial.print( ll.norm() );
-      Serial.print( ", " );
-      Serial.print( ll.val() );
-      Serial.print( ", " );
-      Serial.print( ll.lim() );
-      Serial.print( ", " );
-      Serial.print( lc.norm() );
-      Serial.print( ", " );
-      Serial.print( lc.val() );
-      Serial.print( ", " );
-      Serial.print( lc.lim() );
-      Serial.print( ", " );
-      Serial.print( lr.norm() );
-      Serial.print( ", " );
-      Serial.print( lr.val() );
-      Serial.print( ", " );
-      Serial.print( lr.lim() );
-      Serial.print( "\n" );
-    }
+    led_on(YELLOW);
     if ( ll.onLine() || lc.onLine() || lr.onLine() ) {
-      state++;
+      buzz_on();
+      state = 2;
     }
     else {
       // move straight until you find line
@@ -325,15 +244,136 @@ void loop()
   }
   else if ( state == 2 ) {
     // found line, connect
-    led_on(YELLOW);
+    led_on(GREEN);
     // turn left 90 degrees
     m.turnOnSpot(pLow, LEFT);
     delay(Lturn);
-    state++;
+    buzz_on();
+    state = 3;
   }
   else if ( state == 3 ) {
-    // on line and facing straight, bangbang procedure
-    BangBang();
+    led_on(RED);
+    // bang-bang conditions
+    if ( lc.notOnLine() ) {
+      // centre not on line, check left and right 
+      if ( ll.notOnLine() ) {
+        // centre and left not on line, check right
+        if ( lr.notOnLine() ) {
+          // nothing on line
+          buzz_on();
+          state = 4;
+        }
+        else {
+          // only right on line
+          buzz_on();
+          state = 7;
+        }
+      }
+      else if ( lr.notOnLine() ) {
+        // only left on line 
+        buzz_on();
+        state = 8;
+      }
+    }
+    else {
+      // centre is on line, check left and right
+      // (not possible to only have centre on line)
+      if ( ll.notOnLine() ) { 
+        // left not on line
+        // turn slowly using right as pivot
+        buzz_on();
+        state = 7;
+      }
+      else if ( lr.notOnLine() ) { 
+        // right not on line
+        // turn slowly using left as pivot
+        buzz_on();
+        state = 8;
+      }
+      else {
+        // all 3 on line, move straight
+        buzz_on();
+        state = 9;
+      }
+    }
+  }
+  else if ( state = 4 ) {
+    // turn left 90 degrees
+    m.turnOnSpot(pLow, LEFT);
+    delay(Lturn);
+    // and check if there is a line
+    if ( ll.notOnLine() && lc.notOnLine() && lr.notOnLine() ) {
+      buzz_on();
+      state = 5;
+    }
+    else {
+      buzz_on();
+      state = 3;
+    }
+  }
+  else if ( state = 5 ) 
+  {
+    // turn right 180 degrees
+    m.turnOnSpot(pLow, RIGHT);
+    delay(Rturn);
+    // check if there is a line
+    if ( ll.notOnLine() && lc.notOnLine() && lr.notOnLine() ) {
+      buzz_on();
+      state = 6;
+    }
+    else {
+      buzz_on();
+      state = 3;
+    }
+  }
+  else if ( state = 6 ) {
+    // turn left 90 degrees
+    m.turnOnSpot(pLow, LEFT);
+    delay(Lturn);
+    // and just move straight slowly
+    m.move(pLow);
+    delay(1000);
+    buzz_on();
+    state = 3;
+  }
+  else if ( state = 7 ) {
+    // turn using right as pivot
+    m.turn(pLow, RIGHT);
+    buzz_on();
+    state = 3;
+  }
+  else if ( state = 8 ) {
+    // turn using left as pivot
+    m.turn(pHigh, LEFT);
+    buzz_on();
+    state = 3;
+  }
+  else if ( state = 9 ) {
+    // all 3 on line, move straight
+    m.move(pLow);
+    buzz_on();
+    state = 3;
+  }
+  
+  if (plot_verbose) {
+    Serial.print( ll.norm() );
+    Serial.print( ", " );
+    Serial.print( ll.val() );
+    Serial.print( ", " );
+    Serial.print( ll.lim() );
+    Serial.print( ", " );
+    Serial.print( lc.norm() );
+    Serial.print( ", " );
+    Serial.print( lc.val() );
+    Serial.print( ", " );
+    Serial.print( lc.lim() );
+    Serial.print( ", " );
+    Serial.print( lr.norm() );
+    Serial.print( ", " );
+    Serial.print( lr.val() );
+    Serial.print( ", " );
+    Serial.print( lr.lim() );
+    Serial.print( "\n" );
   }
   // short delay
   delay(25);
