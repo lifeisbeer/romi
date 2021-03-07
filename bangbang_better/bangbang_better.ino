@@ -1,4 +1,3 @@
-// code easier to read.
 #define YELLOW LED_BUILTIN
 #define RED LED_BUILTIN_RX
 #define GREEN LED_BUILTIN_TX
