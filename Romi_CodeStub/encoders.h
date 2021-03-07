@@ -1,18 +1,13 @@
-// These #defines act like a find-and-replace
-// in your code, and make your code more readable.
-
 #define E1_A_PIN  7
 #define E1_B_PIN  23
 #define E0_A_PIN  26
 //E0_B_Pin is defined seperately later
 
 // Volatile Global variables used by Encoder ISR.
-volatile long count_e1; // used by encoder to count the rotation
+volatile long count_right; // used by encoder to count the rotation
 volatile bool oldE1_A;  // used by encoder to remember prior state of A
 volatile bool oldE1_B;  // used by encoder to remember prior state of B
-
-
-volatile long count_e0; // used by encoder to count the rotation
+volatile long count_left; // used by encoder to count the rotation
 volatile bool oldE0_A;  // used by encoder to remember prior state of A
 volatile bool oldE0_B;  // used by encoder to remember prior state of B
 
@@ -50,22 +45,23 @@ ISR( INT6_vect ) {
   // This is an inefficient way of determining
   // the direction.  However it illustrates well
   // against the lecture slides.
-  if( state == 1 ) {           // row 1 from table
-    count_e1 = count_e1 + 1;
-
-  } else if( state == 2 ) {    // row 2 from table
-    // ?
-
-  } else if( state == 4 ) {    // row 4 from table
-    // ?    
-
+  if( state == 1 ) {
+      count_right = count_right + 1;  // cw-front
+  } else if( state == 2 ) {
+      count_right = count_right - 1;  // ccw-back
+  } else if( state == 4 ) {
+      count_right = count_right - 1;  // ccw-back
   } else if( state == 7 ) {
-    // ?
-
+      count_right = count_right + 1;  // cw-front
   } else if( state == 8 ) {
-    // ?
-
-  } // else if(  { // ...etc
+      count_right = count_right + 1;  // cw-front
+  } else if( state == 11 ) {
+      count_right = count_right - 1;  // ccw-back
+  } else if( state == 13 ) {
+      count_right = count_right - 1;  // ccw-back
+  } else if( state == 14 ) {
+      count_right = count_right + 1;  // cw-front
+  }
   
   
 
@@ -74,7 +70,6 @@ ISR( INT6_vect ) {
   oldE1_B = newE1_B;
 
 }
-
 
 // This ISR handles just Encoder 0
 // ISR to read the Encoder0 Channel A and B pins
@@ -122,31 +117,28 @@ ISR( PCINT0_vect ) {
   // This is an inefficient way of determining
   // the direction.  However it illustrates well
   // against the lecture slides.  
-  if( state == 1 ) {           // row 1 from table
-    count_e0 = count_e0 + 1;
-
-  } else if( state == 2 ) {    // row 2 from table
-    // ?
-
-  } else if( state == 4 ) {    // row 4 from table
-    // ?    
-
+  if( state == 1 ) {
+      count_left = count_left + 1;  // cw-front
+  } else if( state == 2 ) {
+      count_left = count_left - 1;  // ccw-back
+  } else if( state == 4 ) {
+      count_left = count_left - 1;  // ccw-back
   } else if( state == 7 ) {
-    // ?
-
+      count_left = count_left + 1;  // cw-front
   } else if( state == 8 ) {
-    // ?
-
-  } // else if(  { // ...etc
+      count_left = count_left + 1;  // cw-front
+  } else if( state == 11 ) {
+      count_left = count_left - 1;  // ccw-back
+  } else if( state == 13 ) {
+      count_left = count_left - 1;  // ccw-back
+  } else if( state == 14 ) {
+      count_left = count_left + 1;  // cw-front
+  }
      
   // Save current state as old state for next call.
   oldE0_A = newE0_A;
   oldE0_B = newE0_B; 
 }
-
-
-
-
 
 /*
    This setup routine enables interrupts for
@@ -158,7 +150,7 @@ ISR( PCINT0_vect ) {
 void setupEncoder1() {
 
   // Initialise our count value to 0.
-  count_e1 = 0;
+  count_right = 0;
   
   // Initialise the prior A & B signals
   // to zero, we don't know what they were.
@@ -201,7 +193,7 @@ void setupEncoder1() {
 void setupEncoder0() {
 
     // Initialise our count value to 0.
-    count_e0 = 0;
+    count_left = 0;
     
     // Initialise the prior A & B signals
     // to zero, we don't know what they were.

@@ -15,8 +15,6 @@ volatile long count_left; // used by encoder to count the rotation
 volatile bool oldE0_A;  // used by encoder to remember prior state of A
 volatile bool oldE0_B;  // used by encoder to remember prior state of B
 
-
-
 // put your setup code here, to run once:
 void setup() {
 
@@ -40,8 +38,6 @@ void setup() {
   Serial.println("*** RESET ***");
 }
 
-
-
 // put your main code here, to run repeatedly:
 void loop() {
 
@@ -53,9 +49,9 @@ void loop() {
   //       automatically updated by the ISR when 
   //       the encoder pins change.  
   //
-  Serial.print( count_e0 );
+  Serial.print( count_left );
   Serial.print( ", ");
-  Serial.println( count_e1 );
+  Serial.println( count_right );
 
   // short delay so that our plotter graph keeps
   // some history.
@@ -117,7 +113,6 @@ ISR( INT6_vect ) {
   oldE1_B = newE1_B;
 
 }
-
 
 // This ISR handles just Encoder 0
 // ISR to read the Encoder0 Channel A and B pins
@@ -185,10 +180,6 @@ ISR( PCINT0_vect ) {
   oldE0_B = newE0_B; 
 }
 
-
-
-
-
 /*
    This setup routine enables interrupts for
    encoder1.  The interrupt is automatically
@@ -199,7 +190,7 @@ ISR( PCINT0_vect ) {
 void setupEncoder1() {
 
   // Initialise our count value to 0.
-  count_e1 = 0;
+  count_right = 0;
 
   // Initialise the prior A & B signals
   // to zero, we don't know what they were.
@@ -242,7 +233,7 @@ void setupEncoder1() {
 void setupEncoder0() {
 
     // Initialise our count value to 0.
-    count_e0 = 0;
+    count_left = 0;
 
     // Initialise the prior A & B signals
     // to zero, we don't know what they were.
