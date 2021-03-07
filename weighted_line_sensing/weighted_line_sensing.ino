@@ -58,6 +58,21 @@ class motors_c {
       // right motor
       setMotorPower(R_PWM_PIN, power);
     }
+
+    void moveDir(float M) {
+      // left motor
+      int pLeft = round(100 * M * -1);
+      if (pLeft < 15) { 
+        pLeft = 15;
+      }
+      setMotorPower(L_PWM_PIN, pLeft);
+      // right motor
+      int pRight = round(100 * M);
+      if (pRight < 15) { 
+        pRight = 15;
+      }
+      setMotorPower(R_PWM_PIN, pRight);
+    }
     
     void turn(int power, bool dir) {
       if (dir) {
@@ -97,10 +112,10 @@ class motors_c {
 class lineSensor_c {
   private:
     int pin;
-    float minVal = 1000.0;
+    float minVal = 1024.0;
     float maxVal = 0.0;
     // default value if not calibrated
-    float limit = 500.0; //more is dark, less is light
+    float limit = 512.0; //more is dark, less is light
   
   public:  
     // Constructor, accepts a pin number as
@@ -120,7 +135,7 @@ class lineSensor_c {
       float value = analogRead( pin );
       if ( value > maxVal ) { value = maxVal; }
       if ( value < minVal ) { value = minVal; }
-      return (value - minVal)/(maxVal - minVal);
+      return 1024*(value - minVal)/(maxVal - minVal);
     }
 
     // return sensor limit
@@ -131,11 +146,10 @@ class lineSensor_c {
     // Write your calibration routine here
     // to remove bias offset
     void cal() {
-      float value;
-      value = analogRead( pin ); // Do an analogRead
+      float value = analogRead( pin ); // Do an analogRead
       if ( value > maxVal ) { maxVal = value; }
       if ( value < minVal ) { minVal = value; }
-      limit = (maxVal + minVal)/2;
+      limit = (maxVal + minVal)/2.0;
     }
     
     // Write a routine here to check if your
@@ -159,16 +173,18 @@ unsigned int nonce = 0;
 unsigned int calTime;
 bool plot_verbose;
 bool msg_verbose;
+bool norm_verbose;
+bool m_verbose;
 
 void blink(int col) {
   if (col == YELLOW) {
     digitalWrite(col, ON);
-    delay(50);
+    delay(10);
     digitalWrite(col, OFF);
   }
   else {
     digitalWrite(col, OFF);
-    delay(50);
+    delay(10);
     digitalWrite(col, ON);
   }
 }
@@ -179,12 +195,54 @@ void buzz() {
   analogWrite(6, 0);
 }
 
+float weighted() {
+  m_verbose = false;
+  norm_verbose = false;
+  
+  // weighted line sensng
+  float M = 0.0;
+  float Ir = lr.norm();
+  float Ic = lc.norm();
+  float Il = ll.norm();
+  if (norm_verbose) {
+    Serial.print( Ir );
+    Serial.print( ", " );
+    Serial.print( Ic );
+    Serial.print( ", " );
+    Serial.print( Il );
+    Serial.print( "\n" );
+  }  
+  float Itotal = Ir + Ic + Il;
+  if ( Itotal > -100 && Itotal < 100 ) {
+    M = 0.0;
+  }
+  else {
+    float Pr = Ir/Itotal;
+    float Pl = Il/Itotal;
+    M = Pl-Pr;
+  }
+  if ( m_verbose ) {
+    Serial.print( Itotal );
+    Serial.print( ", " );
+    Serial.print( M );
+    Serial.print( "\n" );  
+  }
+  return M;
+}
+
 void BangBang() {
   // variables for slow and fast speeds
   int pLow = 20;
-  int pHigh = 25;
-  // bang-bang conditions
-  if ( lc.notOnLine() ) {
+  int pHigh = 30;
+  int single = 1900;
+  float M = weighted();
+  
+  if ( M > 0.1 || M < -0.1 ) {
+    blink(RED);
+    blink(GREEN);
+    m.moveDir(M);
+  }
+  else if ( lc.notOnLine() ) {
     // centre not on line, check left and right 
     if ( ll.notOnLine() ) {
       // left not on line either, check right
@@ -194,19 +252,19 @@ void BangBang() {
         blink(GREEN);
         // turn left 90 degrees
         m.turnOnSpot(pLow, LEFT);
-        delay(1800);
+        delay(single);
         // and check if there is a line
         if ( ll.notOnLine() && lc.notOnLine() && lr.notOnLine() ) {
           // not on line turn right 180 degrees
           // and check if there is a line
           m.turnOnSpot(pLow, RIGHT);
-          delay(3600);
+          delay(2*single);
           // heck if there is a line
           if ( ll.notOnLine() && lc.notOnLine() && lr.notOnLine() ) {
             // not on line
             // turn left 90 degrees
             m.turnOnSpot(pLow, LEFT);
-            delay(1800);
+            delay(single);
             // and just move straight slowly
             m.move(pLow);
             delay(1000);
@@ -290,20 +348,26 @@ void loop()
   // move forward for a bit to connect to line
   else if ( count < calTime + 15 ) { 
     blink(YELLOW);
-    m.move(25); 
+    m.move(35); 
     count++;
   }
   // normal functionality
   else {
-    // using bang-bang method to move
+    // using weighted method to move
     BangBang();
     // OUTPUT METHODS
     if (plot_verbose) {
       Serial.print( ll.norm() );
       Serial.print( ", " );
+      Serial.print( ll.val() );
+      Serial.print( ", " );
       Serial.print( lc.norm() );
       Serial.print( ", " );
+      Serial.print( lc.val() );
+      Serial.print( ", " );
       Serial.print( lr.norm() );
+      Serial.print( ", " );
+      Serial.print( lr.val() );
       Serial.print( "\n" );
     }
     if (msg_verbose) {
