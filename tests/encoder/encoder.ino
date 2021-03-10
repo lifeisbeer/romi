@@ -52,6 +52,8 @@ void loop() {
   Serial.print( count_left );
   Serial.print( ", ");
   Serial.println( count_right );
+  count_left = 0;
+  count_right = count_left;
 
   // short delay so that our plotter graph keeps
   // some history.

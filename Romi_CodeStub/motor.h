@@ -21,22 +21,16 @@ class motors_c {
     // Accepts two integers (motor and power) 
     // and sets the power for that mortor 
     void setMotorPower(int motor, int power) {
-      if ( motor == L_PWM_PIN || motor == R_PWM_PIN ) {
-        if ( power >= 0 ) {
-          if ( power > 255 ) { power = 255; }
-          // pin for direction is +6 from pin for power
-          digitalWrite( motor + 6, DIR_FWD );
-          analogWrite( motor, power );
-        }
-        else {
-          if ( power < -255 ) { power = -255; }
-          digitalWrite( motor + 6, DIR_BWD );
-          analogWrite( motor, -power );    
-        }
+      if ( power >= 0 ) {
+        if ( power > 255 ) { power = 255; }
+        // pin for direction is +6 from pin for power
+        digitalWrite( motor + 6, DIR_FWD );
+        analogWrite( motor, power );
       }
       else {
-        // error wrong motor given
-        Serial.println(" ***Wrong motor passed to function*** ");
+        if ( power < -255 ) { power = -255; }
+        digitalWrite( motor + 6, DIR_BWD );
+        analogWrite( motor, -power );    
       }
     }
     
