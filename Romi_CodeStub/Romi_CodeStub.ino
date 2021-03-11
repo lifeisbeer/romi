@@ -8,10 +8,14 @@
 unsigned int count = 0;
 unsigned int calTime = 50;
 int turn = 1000;
-int fullTurn = 1350;
+int fullTurn = 1450;
 int tPower = 25;
 int state = 0;
 int pState = 0;
+bool turnBack = false;
+bool started1 = false; 
+int distToFinish = 333;
+int offset = 550;
 
 // Setup, only runs once when the power
 // is turned on.  However, if your Romi
@@ -81,7 +85,7 @@ void loop() {
       }
       break;
     
-    // turn left 90 deg, then go to controller(3)
+    // turn left 80 deg, then go to controller(3)
     case 2:
       if ( pState != state ) { Serial.println(state); }
       else { pState = state; }
@@ -145,7 +149,7 @@ void loop() {
       }
       break;
  
-    // turn left 90 deg, then check if on line
+    // turn left 80 deg, then check if on line
     case 4:
       if ( pState != state ) { Serial.println(state); }
       else { pState = state; }
@@ -170,7 +174,7 @@ void loop() {
       }
       break;
     
-    // turn right 180 deg, then check if on line
+    // turn right 170 deg, then check if on line
     case 5:
       if ( pState != state ) { Serial.println(state); }
       else { pState = state; }
@@ -195,7 +199,7 @@ void loop() {
       }
       break;
     
-    // turn left 90 deg, then move straight for a bit
+    // turn left 80 deg, then move straight for a bit
     case 6:
       if ( pState != state ) { Serial.println(state); }
       else { pState = state; }
@@ -223,12 +227,23 @@ void loop() {
         // check if any on line and go to controller
         if ( ll.onLine() || lc.onLine() || lr.onLine() ) {
           buzz_on();
+          // i was at a gap, so next time i need to turn back
+          turnBack = true;
           state = 3;
         }
-        // not on line, then turn back
+        // not on line, then turn backwards and reconnect to line
         else {
-          buzz_on();
-          state = 6;
+          if ( turnBack ) {
+            // means we are at the end => need to go back home
+            buzz_on();
+            count_left = 0;
+            count_right = 0;
+            state = 9;
+          }
+          else {
+            buzz_on();
+            state = 8;
+          }
         }
       }
       else {
@@ -236,8 +251,85 @@ void loop() {
       }
       break;
 
-    // at the end of the line => go home
+    // turn 180 deg, then move to connect to the line again
     case 8:
+      if ( pState != state ) { Serial.println(state); }
+      else { pState = state; }
+      // if I enter here then I started from 1
+      started1 = true;
+      if ( count_right - 2*fullTurn < count_left ){
+        m.turnOnSpot(tPower, RIGHT);
+      }
+      else {
+        m.move(0);
+        count_left = 0;
+        count_right = 0;
+        turnBack = true;
+        count = 0;
+        state = 7;
+      }
+      break;
+
+    // go back home
+    case 9:
+      if ( pState != state ) { Serial.println(state); }
+      else { pState = state; }
+      if ( started1 ) {
+        // turn left 95 deg, move straight for a long time
+        led_on(RED);
+        led_on(YELLOW);
+        if ( count_left - turn - offset < count_right ){
+          m.turnOnSpot(tPower, LEFT);
+        }
+        else {
+          m.move(0);
+          count_left = 0;
+          count_right = 0;
+          count = 0;
+          state = 10;
+        }
+      }
+      else {
+        // turn right 95 deg, move straight for a long time
+        led_on(RED);
+        led_on(GREEN);
+        if ( count_right - turn - offset < count_left ){
+          m.turnOnSpot(tPower, RIGHT);
+        }
+        else {
+          m.move(0);
+          count_left = 0;
+          count_right = 0;
+          count = 0;
+          state = 10;
+        }
+      }
+      break;
+
+    // move straight for a long time
+    case 10:
+      led_on(RED);
+      led_on(GREEN);
+      led_on(YELLOW);
+      if ( pState != state ) { Serial.println(state); }
+      else { pState = state; }
+      adjSpeeds(tPower);
+      m.move2speed(pL, pR);
+      if ( count > distToFinish ) {
+        m.move(0);
+        state = 11;
+      }
+      else {
+        count++;
+      }
+      break;
+
+    // halt
+    case 11:
+      m.move(0);
+      led_on(RED);
+      led_on(GREEN);
+      led_on(YELLOW);
       break;
   }
 
